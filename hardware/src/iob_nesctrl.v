@@ -2,7 +2,7 @@
  * file    iob_nesctrl
  * date    May 2023
  * 
- * brief   Physical interface for 2 Nintendo NES controllers
+ * brief   Physical interface for 2 Nintendo NES controllers based on HEF4021B
 */
 `timescale 1ns/1ps
 
@@ -21,6 +21,7 @@ module iob_nesctrl # (
 		`IOB_INPUT(nesctrl_ctrl2_q7, 1),
 
 		`IOB_OUTPUT(nesctrl_pl, 1),
+		`IOB_OUTPUT(nesctrl_clk, 1),
 		`IOB_OUTPUT(nesctrl_ctrl1_data, 16),
 		`IOB_OUTPUT(nesctrl_ctrl2_data, 16),
 		
@@ -33,41 +34,55 @@ module iob_nesctrl # (
 	reg ctrl1_q7;
 	reg ctrl2_q7;
 	reg pl;
-	reg count_rst;
-	reg [4-1:0] counter;
+	reg slow_clk;
+	reg [5-1:0] q_counter;
+	reg [9-1:0] clk_counter;
 	reg [16-1:0] ctrl1_data;
 	reg [16-1:0] ctrl2_data;
 
+	// 2-5 MHz are the maximum clock frequencies for the HEF4021B for 3 V (possibly). The maximum delay for 3 V, I'm
+	// supposing to be the double of the maximum for 5 V, so that's 250*2 = 500 ns. 500 ns = 2 MHz. To remove any noise
+	// and delay, we can divide by 10 and get 200 kHz. 1/100 Mhz = 1e-8 s = 10 ns. 200 kHz = 1/200 kHz = 5e-6 s =
+	// 5000 ns. 5000 ns / 10 ns = 500 (each 500 pulses). This is for the whole signal though. So we need to divide by 2
+	// to get the correct frequency (edge frequency, compared to the 100 MHz main one): 500 / 2 = 250.
+	localparam EACH_X_EDGES = 250;
+	// 20 to have 1/2 of the time for the data to be read, while the remaining 1/2 is for the data to be wrote.
+	localparam Q_COUNTER_MAX = 20;
+
+	assign ctrl1_q7 = nesctrl_ctrl1_q7;
+	assign ctrl2_q7 = nesctrl_ctrl2_q7;
+
 	initial begin
-		ctrl1_q7 <= 1'b0;
-		ctrl2_q7 <= 1'b0;
-		pl <= 1'b0;
-		count_rst <= 1'b0;
-		counter <= 4'd0;
-		ctrl1_data <= 16'd0;
-		ctrl2_data <= 16'd0;
+		pl = 1'b0;
+		slow_clk = 1'b0;
+		q_counter = 5'd0;
+		clk_counter = 9'd0;
+		ctrl1_data = 16'd0;
+		ctrl2_data = 16'd0;
 	end
 
-	`IOB_COUNTER_R(clk, count_rst, counter)
+	//////////////////////////////////////////////
+	// Slow 200 kHz clock generation
 
-	always @(posedge clk) begin
-		if (9 == counter) begin
-			count_rst <= 1'b1;
-		end else begin
-			if (10 == counter) begin
-				pl <= 1'b1;
-			end else begin
-				pl <= 1'b0;
-			end
-			count_rst <= 1'b0;
-		end
+	`IOB_MODCNT_R(clk, rst, 0, clk_counter, EACH_X_EDGES)
+	`IOB_REG_R(clk, 0 == clk_counter, ~slow_clk, slow_clk, slow_clk)
 
-		if (counter < 10) begin
-			ctrl1_data <= (ctrl1_data | (1'b1 << 10)) | (ctrl1_q7 << counter);
-			ctrl2_data <= (ctrl2_data | (1'b1 << 10)) | (ctrl2_q7 << counter);
-		end else begin
-			ctrl1_data <= 16'd0;
-			ctrl2_data <= 16'd0;
+	//////////////////////////////////////////////
+	// Q counter and data gathering, with the slow clock
+
+	`IOB_COUNTER_R(slow_clk, Q_COUNTER_MAX == q_counter, q_counter)
+	`IOB_REG_R(slow_clk, Q_COUNTER_MAX == q_counter || q_counter < 9, 1'b1, pl, 1'b0)
+	`IOB_COMB begin
+		if (0 == q_counter) begin
+			ctrl1_data = 16'd0;
+			ctrl2_data = 16'd0;
+		end else if (q_counter < 9) begin
+			// Invert the bit since 1 means not being pressed, and vice-versa (datasheet)
+			ctrl1_data = ctrl1_q7 == 1'b1 ? ctrl1_data & ~(1'b1 << (q_counter - 1)) : ctrl1_data | (1'b1 << (q_counter - 1));
+			ctrl2_data = ctrl2_q7 == 1'b1 ? ctrl1_data & ~(1'b1 << (q_counter - 1)) : ctrl1_data | (1'b1 << (q_counter - 1));
+		end else if (10 == q_counter) begin
+			ctrl1_data = ctrl1_data | (1'b1 << 8);
+			ctrl2_data = ctrl2_data | (1'b1 << 8);
 		end
 	end
 
@@ -80,5 +95,6 @@ module iob_nesctrl # (
 	assign nesctrl_ctrl1_data = ctrl1_data;
 	assign nesctrl_ctrl2_data = ctrl2_data;
 	assign nesctrl_pl = pl;
+	assign nesctrl_clk = ~slow_clk; // Invert the clock to have a delay of 1/2 clock cycle
 
 endmodule // iob_nesctrl

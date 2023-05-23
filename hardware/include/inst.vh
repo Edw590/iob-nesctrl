@@ -11,6 +11,7 @@
       .nesctrl_ctrl1_q7     (nesctrl_ctrl1_q7),
       .nesctrl_ctrl2_q7     (nesctrl_ctrl2_q7),
       .nesctrl_pl           (nesctrl_pl),
+      .nesctrl_clk          (nesctrl_clk),
       .nesctrl_ctrl1_data   (nesctrl_ctrl1_data),
       .nesctrl_ctrl2_data   (nesctrl_ctrl2_data),
 
