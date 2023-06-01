@@ -12,9 +12,9 @@ void nesctrl_init(int base_address) {
 //Set values on outputs
 
 // Get values from inputs
-uint16_t nesctrl_get_ctrl1_data() {
+uint8_t nesctrl_get_ctrl1_data() {
 	return IOB_NESCTRL_GET_CTRL1_DATA();
 }
-uint16_t nesctrl_get_ctrl2_data() {
+uint8_t nesctrl_get_ctrl2_data() {
 	return IOB_NESCTRL_GET_CTRL2_DATA();
 }

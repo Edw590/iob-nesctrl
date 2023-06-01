@@ -10,5 +10,5 @@ void nesctrl_init(int base_address);
 //Set image memory source
 
 // Get values from inputs
-uint16_t nesctrl_get_ctrl1_data();
-uint16_t nesctrl_get_ctrl2_data();
+uint8_t nesctrl_get_ctrl1_data();
+uint8_t nesctrl_get_ctrl2_data();
