@@ -10,9 +10,9 @@
       // Registers interface
       .nesctrl_ctrl1_q7     (nesctrl_ctrl1_q7),
       .nesctrl_ctrl2_q7     (nesctrl_ctrl2_q7),
-      .nesctrl_pl           (nesctrl_pl),
+      .nesctrl_pl1          (nesctrl_pl1),
       .nesctrl_pl2          (nesctrl_pl2),
-      .nesctrl_clk          (nesctrl_clk),
+      .nesctrl_clk1         (nesctrl_clk1),
       .nesctrl_clk2         (nesctrl_clk2),
       .nesctrl_ctrl2_data   (nesctrl_ctrl2_data),
 

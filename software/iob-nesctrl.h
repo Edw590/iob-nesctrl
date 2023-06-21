@@ -2,12 +2,10 @@
 
 #include "iob_nesctrl_swreg.h"
 
-//IM functions
+// NESCTRL functions
 
-//Set IM base address
+//Set NESCTRL base address
 void nesctrl_init(int base_address);
-
-//Set image memory source
 
 // Get values from inputs
 uint8_t nesctrl_get_ctrl1_data();
